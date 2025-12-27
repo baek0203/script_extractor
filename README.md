@@ -4,10 +4,10 @@ Extract and organize YouTube video transcripts with AI-powered semantic segmenta
 
 ## Who Is This For?
 
-- Anyone who wants to save video scripts as interview or lecture notes
-- Those who need to find specific parts of video content
-- People who want to organize video content as text
-- Users who want to communicate with AI using transcripts
+- who wants to save video scripts as interview or lecture notes
+- who need to find specific parts of video content
+- who want to organize video content as text
+- who want to communicate with AI using transcripts
 
 ## Main Features
 
@@ -37,7 +37,7 @@ Python 3.8 or higher is required.
 
 ### Step 2: Install Dependencies
 
-#### Basic Usage (Recommended)
+#### Basic Usage (Essential)
 ```bash
 pip install yt-dlp webvtt-py pandas
 ```
@@ -57,7 +57,7 @@ pip install -r requirements.txt
 2. Run the following command in your terminal:
 
 ```bash
-python main.py VIDEO_URL
+python main.py <VIDEO_URL>
 ```
 
 **Example:**
