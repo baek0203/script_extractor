@@ -35,6 +35,6 @@ Thumbs.db
 # Logs
 *.log
 
-# History/docs (optional, remove if you want to include)
+# docs
 history.md
 reason.md
