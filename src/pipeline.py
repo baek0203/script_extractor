@@ -9,6 +9,7 @@ all extraction steps.
 
 import os
 from datetime import datetime
+from typing import Generator, Tuple, Dict
 
 from .download import extract_video_info, download_subtitles
 from .preprocessing import parse_vtt_file, merge_by_time_window
@@ -130,4 +131,113 @@ def process_video(video_url: str,
 
     except Exception as e:
         print(f"\n❌ Error: {e}")
+        raise
+
+
+def process_video_progressive(video_url: str,
+                              output_dir: str = "data/quick_start",
+                              window_seconds: int = 25) -> Generator[Tuple[str, Dict], None, None]:
+    """
+    Progressive video transcript extraction pipeline.
+
+    Yields results in two stages:
+    1. Basic transcript (immediate)
+    2. Semantic segmentation (advanced processing)
+
+    Args:
+        video_url: YouTube video URL
+        output_dir: Directory to save output files
+        window_seconds: Time window for merging segments (default: 25s)
+
+    Yields:
+        tuple: (stage, data)
+            - stage: "basic" or "semantic"
+            - data: dict with file paths and content
+
+    Raises:
+        Exception: If any step fails
+    """
+    import shutil
+
+    # Create temp directory
+    temp_dir = os.path.join(output_dir, "temp")
+    os.makedirs(temp_dir, exist_ok=True)
+
+    try:
+        # Step 1: Extract video info
+        video_info = extract_video_info(video_url)
+
+        # Step 2: Download subtitles
+        vtt_path = download_subtitles(video_url, video_info['id'], temp_dir)
+
+        # Step 3: Parse and preprocess
+        df = parse_vtt_file(vtt_path)
+
+        if df.empty:
+            raise Exception("No valid subtitle content found")
+
+        # Step 4: Merge by time window
+        df_merged = merge_by_time_window(df, window_seconds=window_seconds)
+
+        if df_merged.empty:
+            raise Exception("No data after merging")
+
+        # Step 5: Save basic output (WITHOUT semantic segmentation)
+        # This happens FAST
+        basic_paths = save_all_outputs(
+            df_merged=df_merged,
+            video_info=video_info,
+            output_dir=output_dir,
+            semantic_paragraphs=None,  # No semantic yet
+            topic_titles=None
+        )
+
+        # Read basic plain text
+        basic_content = ""
+        if basic_paths.get('txt') and os.path.exists(basic_paths['txt']):
+            with open(basic_paths['txt'], 'r', encoding='utf-8') as f:
+                basic_content = f.read()
+
+        # Yield stage 1: Basic transcript (IMMEDIATE)
+        yield ("basic", {
+            "paths": basic_paths,
+            "content": basic_content,
+            "video_info": video_info
+        })
+
+        # Step 6: Semantic paragraph segmentation (SLOW - Advanced processing)
+        semantic_paragraphs, topic_titles = segment_by_semantics(df_merged)
+
+        # Step 7: Save semantic output
+        semantic_paths = save_all_outputs(
+            df_merged=df_merged,
+            video_info=video_info,
+            output_dir=output_dir,
+            semantic_paragraphs=semantic_paragraphs,
+            topic_titles=topic_titles
+        )
+
+        # Read semantic content
+        semantic_content = ""
+        if semantic_paths.get('txt') and os.path.exists(semantic_paths['txt']):
+            with open(semantic_paths['txt'], 'r', encoding='utf-8') as f:
+                semantic_content = f.read()
+
+        # Yield stage 2: Semantic segmentation (DELAYED)
+        yield ("semantic", {
+            "paths": semantic_paths,
+            "content": semantic_content,
+            "video_info": video_info
+        })
+
+        # Cleanup temp files and folder
+        try:
+            if os.path.exists(vtt_path):
+                os.remove(vtt_path)
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+        except Exception as e:
+            print(f"Cleanup warning: {e}")
+
+    except Exception as e:
         raise
