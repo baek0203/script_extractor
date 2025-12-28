@@ -13,7 +13,7 @@ from typing import Generator, Tuple, Dict
 
 from .download import extract_video_info, download_subtitles
 from .preprocessing import parse_vtt_file, merge_by_time_window
-from .semantic_segmentation import segment_by_semantics
+from .llm_segmentation import segment_with_gemini
 from .output import save_all_outputs
 
 
@@ -75,8 +75,8 @@ def process_video(video_url: str,
 
         if use_semantic:
             print()
-            print("🧠 Performing semantic segmentation...")
-            semantic_paragraphs, topic_titles = segment_by_semantics(df_merged)
+            print("🧠 Performing semantic segmentation with Gemini...")
+            semantic_paragraphs, topic_titles = segment_with_gemini(df_merged)
 
         # Step 6: Save outputs
         print()
@@ -206,7 +206,7 @@ def process_video_progressive(video_url: str,
         })
 
         # Step 6: Semantic paragraph segmentation (SLOW - Advanced processing)
-        semantic_paragraphs, topic_titles = segment_by_semantics(df_merged)
+        semantic_paragraphs, topic_titles = segment_with_gemini(df_merged)
 
         # Step 7: Save semantic output
         semantic_paths = save_all_outputs(

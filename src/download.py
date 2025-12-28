@@ -52,7 +52,9 @@ def extract_video_info(video_url: str) -> dict:
 
 def download_subtitles(video_url: str, video_id: str, output_dir: str) -> str:
     """
-    Download English subtitles for a video.
+    Download subtitles for a video (any available language).
+
+    Priority: English > Korean > Any available language
 
     Args:
         video_url: YouTube video URL
@@ -69,14 +71,18 @@ def download_subtitles(video_url: str, video_id: str, output_dir: str) -> str:
 
     os.makedirs(output_dir, exist_ok=True)
 
+    # Try downloading with error handling
+    import glob
+
     ydl_opts = {
         'writesubtitles': True,
         'writeautomaticsub': True,
-        'subtitleslangs': ['en'],
+        'subtitleslangs': ['en', 'ko'],  # Prefer English, then Korean
         'skip_download': True,
         'outtmpl': f"{output_dir}/{video_id}.%(ext)s",
         'quiet': True,
         'no_warnings': True,
+        'ignoreerrors': True,  # Continue on download errors
         # Add extractor args to handle PO token requirement
         'extractor_args': {
             'youtube': {
@@ -90,13 +96,33 @@ def download_subtitles(video_url: str, video_id: str, output_dir: str) -> str:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
 
-        vtt_path = os.path.join(output_dir, f"{video_id}.en.vtt")
+        # Try to find downloaded subtitle file
+        # Priority: en > ko > any other language
+        possible_paths = [
+            os.path.join(output_dir, f"{video_id}.en.vtt"),
+            os.path.join(output_dir, f"{video_id}.ko.vtt"),
+        ]
 
-        if not os.path.exists(vtt_path):
-            raise Exception("No subtitles available for this video")
+        # Check if any of the preferred subtitles exist
+        for vtt_path in possible_paths:
+            if os.path.exists(vtt_path):
+                lang = "English" if ".en." in vtt_path else "Korean"
+                print(f"   ✅ Subtitles downloaded ({lang})")
+                return vtt_path
 
-        print(f"   ✅ Subtitles downloaded")
-        return vtt_path
+        # If no preferred language, find any .vtt file
+        vtt_files = glob.glob(os.path.join(output_dir, f"{video_id}.*.vtt"))
+        if vtt_files:
+            print(f"   ✅ Subtitles downloaded")
+            return vtt_files[0]
+
+        raise Exception("No subtitles available for this video")
 
     except Exception as e:
+        # Check if any subtitle was downloaded despite the error
+        vtt_files = glob.glob(os.path.join(output_dir, f"{video_id}.*.vtt"))
+        if vtt_files:
+            print(f"   ✅ Subtitles downloaded (with warnings)")
+            return vtt_files[0]
+
         raise Exception(f"Failed to download subtitles: {e}")
