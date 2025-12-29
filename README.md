@@ -4,10 +4,10 @@ Extract and organize YouTube video transcripts with AI-powered semantic segmenta
 
 ## Who Is This For?
 
-- who wants to save video scripts as interview or lecture notes
-- who need to find specific parts of video content
-- who want to organize video content as text
-- who want to communicate with AI using transcripts
+- To save video scripts as interview or lecture notes
+- To find specific parts of video content
+- To organize video content as text
+- To communicate with AI using transcripts
 
 ## Main Features
 
